@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pd-automations-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: pd-automations
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5050

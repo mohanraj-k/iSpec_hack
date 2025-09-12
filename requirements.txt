@@ -1,0 +1,42 @@
+# Core web framework
+Flask
+
+# Production WSGI server
+Gunicorn
+
+# Environment variable management
+dotenv
+python-dotenv
+
+# Data science and Excel processing
+numpy
+pandas
+openpyxl
+
+# Azure OpenAI integration (custom client likely needs openai)
+openai
+
+# Database and ORM (if used)
+SQLAlchemy
+flask_sqlalchemy
+psycopg2-binary
+
+# Utilities
+werkzeug
+blinker
+packaging
+python-dateutil
+pytz
+tzdata
+click
+colorama
+
+# If using FAISS for vector search (comment if not needed)
+faiss-cpu
+
+# Email validation (if used)
+email-validator
+
+# Add any other dependencies your codebase uses below
+
+boto3

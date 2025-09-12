@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pd-automations
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pd-automations
+  template:
+    metadata:
+      labels:
+        app: pd-automations
+    spec:
+      containers:
+      - name: pd-automations
+        image: <YOUR_DOCKER_IMAGE>
+        ports:
+        - containerPort: 5050
+        env:
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: session-secret
+              key: secret
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-secret
+              key: api-key
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+        - name: output
+          mountPath: /app/output
+      volumes:
+      - name: uploads
+        emptyDir: {}
+      - name: output
+        emptyDir: {}

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto MDD - Master Data Definition Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <meta name="max-upload-mb" content="{{ max_upload_mb|int }}">
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .card {
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+        }
+        .btn {
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-group .btn {
+            margin: 0 4px;
+        }
+        .table {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+        
+        .card-body {
+            color: #2c3e50;
+        }
+        
+        .card-header h5 {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .text-muted {
+            color: #6c757d !important;
+            opacity: 0.9;
+        }
+        .table thead th {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            color: white;
+            border-bottom: 2px solid #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+        .navbar {
+            background: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+            color: #2c3e50 !important;
+            font-weight: 600;
+        }
+        
+        .navbar-text {
+            color: #6c757d !important;
+        }
+        
+        /* Enhanced readable green for match badges - lighter and more visible */
+        .badge.bg-success {
+            background-color: #28a745 !important; /* Bootstrap green - readable */
+            color: white !important;
+            font-weight: 600 !important;
+            border: 1px solid #1e7e34 !important;
+        }
+        
+        .badge.bg-success[style*="opacity"] {
+            background-color: #34ce57 !important; /* Lighter green */
+            color: white !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Ensure YES badges and table cells use the readable green */
+        .bg-success {
+            background-color: #28a745 !important;
+            color: white !important;
+        }
+        
+        /* Custom range slider styling for better visibility */
+        .form-range {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 12px;
+            border-radius: 6px;
+            outline: none;
+            background: linear-gradient(to right, #28a745 0%, #28a745 25%, #ffc107 25%, #ffc107 50%, #fd7e14 50%, #fd7e14 75%, #dc3545 75%, #dc3545 100%);
+            opacity: 0.9;
+            transition: opacity 0.2s;
+        }
+        
+        .form-range:hover {
+            opacity: 1;
+        }
+        
+        .form-range::-webkit-slider-track {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right, #28a745 0%, #28a745 25%, #ffc107 25%, #ffc107 50%, #fd7e14 50%, #fd7e14 75%, #dc3545 75%, #dc3545 100%);
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 4px solid #007bff;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: -8px;
+        }
+        
+        .form-range::-webkit-slider-thumb:hover {
+            border-color: #0056b3;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        
+        .form-range::-moz-range-track {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(to right, #28a745 0%, #28a745 25%, #ffc107 25%, #ffc107 50%, #fd7e14 50%, #fd7e14 75%, #dc3545 75%, #dc3545 100%);
+            border: none;
+        }
+        
+        .form-range::-moz-range-thumb {
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 4px solid #007bff;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .form-range::-moz-range-thumb:hover {
+            border-color: #0056b3;
+            transform: scale(1.1);
+        }
+        
+        /* Enhanced vibrant theme colors */
+        .btn-outline-info {
+            border-color: #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .btn-outline-info:hover {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-outline-warning {
+            border-color: #fd7e14;
+            color: #fd7e14;
+        }
+        
+        .btn-outline-warning:hover {
+            background-color: #fd7e14;
+            border-color: #fd7e14;
+            color: white;
+        }
+        
+        .btn-outline-primary {
+            border-color: #007bff;
+            color: #007bff;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+        
+        /* Enhanced card styling */
+        .card {
+            border: 1px solid #dee2e6;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            font-weight: 600;
+        }
+        
+        /* Enhanced table styling */
+        .table-dark th {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            border-bottom: 2px solid #6c757d;
+        }
+        
+        /* Enhanced alert styling */
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-info {
+            background-color: #cce7ff;
+            border-color: #b3daff;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<style>
+        /* Circular progress for rebuild modal */
+        .progress-circle {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(#0d6efd 0deg, #e9ecef 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+        .progress-circle::after {
+            content: "";
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            background: #ffffff;
+            border-radius: 50%;
+        }
+        .progress-circle span {
+            position: absolute;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #0d6efd;
+        }
+    </style>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-magic me-2"></i>
+                <div>
+                    <span class="fw-bold">Auto MDD</span>
+                    <small class="d-block text-muted" style="font-size: 0.85rem; line-height: 1.3;">
+                        Auto suggest DQ's from MDD library and create DQ specification for Smart Data Quality
+                    </small>
+                </div>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-brain me-1"></i>OpenAI + FAISS Vector Search
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4" style="padding-left: 15px; padding-right: 15px; max-width: 98%;">
+
+
+        <!-- Status Alert -->
+        <div id="statusAlert" class="alert alert-info d-none" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span id="statusMessage">Initializing...</span>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-question-circle me-2"></i>How It Works
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-cube fa-3x text-primary mb-2"></i>
+                                    <h6>1. FAISS Vector DB</h6>
+                                    <small class="text-muted"><span id="embeddings-value">722</span> OpenAI embeddings from Library of DQ specifications</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-brain fa-3x text-success mb-2"></i>
+                                    <h6>2. OpenAI Semantic Search</h6>
+                                    <small class="text-muted">text-embedding-3-small model for similarity matching</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-calculator fa-3x text-warning mb-2"></i>
+                                    <h6>3. Hybrid Scoring</h6>
+                                    <small class="text-muted">50% cosine similarity + 50% keyword overlap</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-wand-magic-sparkles fa-3x text-info mb-2"></i>
+                                    <h6>4. Metadata Enrichment</h6>
+                                    <small class="text-muted">Auto-populate forms, visits, variables with validation</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-database me-2"></i>Vector Database Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            View status of FAISS vector database with OpenAI embeddings from Library of DQ specifications (MDD files).
+                        </p>
+                        <div class="btn-group" role="group">
+                            <button id="summaryBtn" class="btn btn-outline-info">
+                                <i class="fas fa-chart-pie me-2"></i>View Database Summary
+                            </button>
+                            <button id="rebuildDbBtn" class="btn btn-outline-warning">
+                                <i class="fas fa-hammer me-2"></i>Rebuild Database
+                            </button>
+                            <button id="helpBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-question-circle me-2"></i>Help & Documentation
+                            </button>
+                        </div>
+                        <div id="dbStatus" class="mt-3"></div>
+                        <div id="dbSummary" class="collapse mt-3">
+                            <div class="card bg-light border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info">Database Summary</h6>
+                                    <div id="summaryContent"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="helpSection" class="collapse mt-3">
+                            <div class="card bg-light border-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0 text-secondary">
+                                        <i class="fas fa-book me-2"></i>Help & Documentation
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5 class="text-primary fw-bold">
+                                                <i class="fas fa-upload me-2"></i>Getting Started
+                                            </h5>
+                                            <p style="font-size: 1rem;">
+                                                <strong>Step 1:</strong> Upload your target MDD Excel file containing validation rules to match.<br>
+                                                <strong>Step 2:</strong> Click "Process File" to start semantic matching against Library of DQ specifications.<br>
+                                                <strong>Step 3:</strong> Download enriched results with confidence scores and explanations.
+                                            </p>
+                                            
+                                            <h5 class="text-primary mt-4 fw-bold">
+                                                <i class="fas fa-file-excel me-2"></i>File Requirements
+                                            </h5>
+                                             <ul style="font-size: 1rem;">
+                                                <li><strong>Format:</strong> Excel (.xlsx) or CSV (.csv) files</li>
+                                                <li><strong>Size Limit:</strong> {{ max_upload_mb }}MB maximum</li>
+                                                <li><strong>Required Columns:</strong>
+                                                    <ul>
+                                                        <li>DQ Name (or Check Name)</li>
+                                                        <li>DQ Description</li>
+                                                        <li>Standard Query text</li>
+                                                    </ul>
+                                                </li>
+                                                <li><strong>Optional (recommended):</strong>
+                                                    <ul>
+                                                        <li>Primary Form Name</li>
+                                                        <li>Primary Visit Name</li>
+                                                    </ul>
+                                                </li>
+                                                <li><strong>Template:</strong> <a href="{{ url_for('static', filename='templates/target_mdd_template.csv') }}" download="target_mdd_template.csv">Download CSV Template</a></li>
+                                             </ul>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <h5 class="text-success fw-bold">
+                                                <i class="fas fa-brain me-2"></i>How Semantic Matching Works
+                                            </h5>
+                                            <p style="font-size: 1rem;">
+                                                The system uses <strong>OpenAI embeddings</strong> and <strong>vector search</strong> to find similar validation rules:
+                                            </p>
+                                            <ol style="font-size: 1rem;">
+                                                <li><strong>Text Processing:</strong> Extracts and cleans validation descriptions</li>
+                                                <li><strong>AI Embeddings:</strong> Converts text to 1536-dimensional vectors using OpenAI</li>
+                                                <li><strong>Similarity Search:</strong> Finds closest matches using cosine similarity</li>
+                                                <li><strong>Hybrid Scoring:</strong> Combines semantic similarity (50%) + keyword overlap (50%)</li>
+                                                <li><strong>Business Validation:</strong> Ensures matches make clinical sense</li>
+                                            </ol>
+                                            
+                                            <h5 class="text-warning mt-3 fw-bold">
+                                                <i class="fas fa-chart-bar me-2"></i>Match Quality Guide
+                                            </h5>
+                                            <div style="font-size: 1rem;">
+                                                <div class="mb-2">
+                                                    <span class="badge bg-success me-2">Excellent</span>
+                                                    <span class="text-muted">≥70% - Direct reuse with minimal changes</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <span class="badge bg-success me-2" style="opacity: 0.8;">Good</span>
+                                                    <span class="text-muted">≥55% - Strong similarity, minor adaptations</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <span class="badge bg-warning me-2">Moderate</span>
+                                                    <span class="text-muted">≥40% - Related concepts, review required</span>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <span class="badge bg-warning me-2" style="opacity: 0.8;">Weak</span>
+                                                    <span class="text-muted">≥25% - Some relevance, significant review</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr class="my-4">
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <h5 class="text-info fw-bold">
+                                                <i class="fas fa-database me-2"></i>Database Management
+                                            </h5>
+                                            <p style="font-size: 1rem;">
+                                                <strong>Rebuild Database:</strong> Use when you add new MDD files to the reference library.
+                                            </p>
+                                             <ol style="font-size: 1rem;">
+                                                <li>Add new .xlsx or .csv files to MDD_DATABASE/ folder</li>
+                                                <li>Click "Rebuild Database" (orange button)</li>
+                                                <li>Confirm action (takes 2-3 minutes)</li>
+                                                <li>System regenerates embeddings for all files</li>
+                                                <li>Updated totals appear automatically</li>
+                                             </ol>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <h5 class="text-primary fw-bold">
+                                                <i class="fas fa-download me-2"></i>Output Files
+                                            </h5>
+                                            <p style="font-size: 1rem;">
+                                                <strong>CSV Output:</strong> Enriched MDD with all metadata for spreadsheet analysis<br>
+                                                <strong>JSON Output:</strong> Detailed results with confidence scores and explanations<br>
+                                                <strong>Matches Only:</strong> Filtered version containing only successful matches
+                                            </p>
+                                            <p style="font-size: 1rem;">
+                                                <strong>Key Fields:</strong> Is Match Found, Confidence Score, Match Type, Match Explanation, Reference Details, Extracted Metadata
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <h5 class="text-secondary fw-bold">
+                                                <i class="fas fa-lightbulb me-2"></i>Best Practices
+                                            </h5>
+                                            <ul style="font-size: 1rem;">
+                                                <li><strong>Clear Descriptions:</strong> Detailed validation descriptions get better matches</li>
+                                                <li><strong>Standard Terminology:</strong> Use clinical terms (lab, AE, vital signs)</li>
+                                                <li><strong>Complete Data:</strong> Fill all required columns for optimal results</li>
+                                                <li><strong>Review Moderate Matches:</strong> Often contain valuable insights</li>
+                                                <li><strong>Check Explanations:</strong> Understand why matches were selected</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Reference Database:</strong> Contains Library of DQ specifications (MDD files) covering laboratory data, adverse events, vital signs, pharmacokinetics, and concomitant medications for comprehensive semantic matching.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-upload me-2"></i>Upload Target MDD File
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="sponsorName" class="form-label">Sponsor Name</label>
+                                <input type="text" class="form-control" id="sponsorName" name="sponsor_name" placeholder="Enter Sponsor Name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Match Scope</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="match_scope" id="matchScopeAcross" value="across" checked>
+                                        <label class="form-check-label" for="matchScopeAcross">Across Sponsors</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="match_scope" id="matchScopeSame" value="same">
+                                        <label class="form-check-label" for="matchScopeSame">Same Sponsor</label>
+                                    </div>
+                                </div>
+                                <div class="form-text">Same Sponsor limits matches to the sponsor you entered; Across Sponsors searches all sponsors.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="targetFile" class="form-label">Select Target MDD File (.xlsx or .csv)</label>
+                                <input type="file" class="form-control" id="targetFile" name="target_file" accept=".xlsx,.csv" required>
+                                <div class="form-text">
+                                    Upload your target study MDD specification file (.xlsx or .csv format)
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{{ url_for('static', filename='templates/target_mdd_template.csv') }}" download="target_mdd_template.csv" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-download me-1"></i>Download CSV Template
+                                    </a>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success" id="uploadBtn">
+                                <i class="fas fa-upload me-2"></i>Process MDD File
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Progress -->
+        <div id="progressSection" class="row mb-4 d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>Processing Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3 bg-light">
+    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+         role="progressbar" style="width: 0%; background-color: #007bff !important; color: #fff !important;">0%</div>
+</div>
+                        <div id="progressText" class="text-center">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Initializing processing...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="row mb-4 d-none">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Processing Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Compact Header with Stats and Controls -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <!-- Statistics in compact horizontal layout -->
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <div class="d-flex align-items-center px-2 py-1 rounded" style="background-color: #d1f2d1; border: 1px solid #28a745;">
+                                    <span id="excellentMatches" class="fw-bold" style="color: #155724;">0</span>
+                                    <small class="ms-2" style="color: #155724;">Excellent</small>
+                                </div>
+                                <div class="d-flex align-items-center px-2 py-1 rounded" style="background-color: #d1f2d1; border: 1px solid #28a745;">
+                                    <span id="goodMatches" class="fw-bold" style="color: #155724;">0</span>
+                                    <small class="ms-2" style="color: #155724;">Good</small>
+                                </div>
+                                <div class="d-flex align-items-center px-2 py-1 rounded" style="background-color: #fff3cd; border: 1px solid #ffc107;">
+                                    <span id="moderateMatches" class="fw-bold" style="color: #856404;">0</span>
+                                    <small class="ms-2" style="color: #856404;">Moderate</small>
+                                </div>
+                                <div class="d-flex align-items-center px-2 py-1 rounded" style="background-color: #ffe5d0; border: 1px solid #fd7e14;">
+                                    <span id="weakMatches" class="fw-bold" style="color: #fd7e14;">0</span>
+                                    <small class="ms-2" style="color: #fd7e14;">Weak</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Controls in right corner -->
+                            <div class="d-flex gap-3 align-items-center">
+                                <!-- Download Links -->
+                                <div id="downloadSection" class="d-flex gap-2 align-items-center">
+                                    <a id="downloadCsv" href="javascript:void(0)" class="btn btn-success btn-sm disabled" download title="Download CSV file">
+                                        <i class="fas fa-file-csv"></i>
+                                    </a>
+                                    <a id="downloadJson" href="javascript:void(0)" class="btn btn-info btn-sm disabled" download title="Download JSON file">
+                                        <i class="fas fa-file-code"></i>
+                                    </a>
+                                </div>
+                                <!-- Filter Buttons -->
+                                <!-- <div class="btn-group btn-group-sm" role="group">
+                                    <input type="radio" class="btn-check" name="resultFilter" id="showAll" value="all" checked>
+                                    <label class="btn btn-outline-primary" for="showAll">ALL RESULTS</label>
+                                    
+                                    <input type="radio" class="btn-check" name="resultFilter" id="showMatches" value="matches">
+                                    <label class="btn btn-outline-warning" for="showMatches">MATCHES ONLY</label>
+                                </div> -->
+                            </div>
+                        </div>
+
+                        <!-- Detailed Match Results -->
+                        <div id="matchResultsSection">
+                            
+                            <!-- Compact Quality Filter Slider -->
+                            <div class="d-flex align-items-center mb-3 p-2" style="background: rgba(248, 249, 250, 0.5); border-radius: 6px;">
+                                <label for="qualitySlider" class="fw-bold text-dark mb-0 me-3" style="font-size: 0.9rem;">
+                                    <i class="fas fa-filter me-1 text-primary"></i>Quality Filter:
+                                </label>
+                                <div style="width: 300px;">
+                                    <input type="range" class="form-range" id="qualitySlider" min="1" max="4" value="1" step="1">
+                                    <div class="d-flex justify-content-between mt-1" style="font-size: 0.75rem; font-weight: 600;">
+                                        <span class="text-success">Excellent</span>
+                                        <span class="text-success">Good</span>
+                                        <span class="text-warning">Moderate</span>
+                                        <span style="color: #fd7e14;">Weak</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="width: 100%; overflow-x: auto; margin: 0; padding: 0;">
+                                <table class="table table-striped table-hover" id="matchResultsTable" style="width: 100%; min-width: 3200px; table-layout: fixed; margin-bottom: 0;">
+                                    <style>
+                                        #matchResultsTable tbody tr {
+                                            height: auto;
+                                            min-height: 85px;
+                                        }
+                                        #matchResultsTable td {
+                                            vertical-align: top;
+                                            padding: 10px 8px;
+                                            border-right: 1px solid #dee2e6;
+                                        }
+                                        #matchResultsTable th {
+                                            padding: 10px 8px;
+                                            font-size: 12px;
+                                            font-weight: 600;
+                                            border-right: 1px solid #adb5bd;
+                                        }
+                                        .table-responsive {
+                                            max-height: 75vh;
+                                            overflow-y: auto;
+                                            border: 1px solid #dee2e6;
+                                            border-radius: 8px;
+                                        }
+                                        .card-body {
+                                            padding: 0;
+                                        }
+                                    </style>
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 40px; background-color: #212529 !important; color: white !important;" class="text-center">#</th>
+                                            <th style="width: 80px; background-color: #212529 !important; color: white !important;" class="text-center">Match</th>
+                                            <th style="width: 120px; background-color: #212529 !important; color: white !important;" class="text-center">Type</th>
+                                            <th style="width: 70px; background-color: #212529 !important; color: white !important;" class="text-center">Score <i class="fas fa-sort-down text-primary"></i></th>
+                                            <th style="width: 120px; background-color: #212529 !important; color: white !important;" class="text-center">Sponsor</th>
+                                            <th style="width: 140px; background-color: #212529 !important; color: white !important;">Ref Check Name</th>
+                                            <th style="width: 270px; background-color: #212529 !important; color: white !important;">Reference Description</th>
+                                            <th style="width: 220px; background-color: #212529 !important; color: white !important;">Reference Query</th>
+                                            <th style="width: 270px; background-color: #212529 !important; color: white !important;">Ref Code</th>
+                                            <th style="width: 140px; background-color: #212529 !important; color: white !important;">Target Check</th>
+                                            <th style="width: 270px; background-color: #212529 !important; color: white !important;">Target Description</th>
+                                            <th style="width: 220px; background-color: #212529 !important; color: white !important;">Target Query</th>
+                                            <th style="width: 80px; background-color: #0d6efd !important; color: white !important;">Ref Primary Domain</th>
+                                            <th style="width: 130px; background-color: #0d6efd !important; color: white !important;">Ref Primary Form</th>
+                                            <th style="width: 130px; background-color: #0d6efd !important; color: white !important;">Ref Primary Visit</th>
+                                            <th style="width: 150px; background-color: #0d6efd !important; color: white !important;">Ref Primary Columns</th>
+                                            <th style="width: 150px; background-color: #0d6efd !important; color: white !important;">Ref Primary Dynamic Vars</th>
+                                            <th style="width: 150px; background-color: #0d6efd !important; color: white !important;">Ref Relational Domains</th>
+                                            <th style="width: 150px; background-color: #0d6efd !important; color: white !important;">Ref Relational Vars</th>
+                                            <th style="width: 150px; background-color: #0d6efd !important; color: white !important;">Ref Relational Dynamic Vars</th>
+                                            <th style="width: 120px; background-color: #0d6efd !important; color: white !important;">Ref Query Target</th>
+                                            <th style="width: 120px; background-color: #0d6efd !important; color: white !important;">Ref Origin Study</th>
+                                            <th style="width: 400px; background-color: #0d6efd !important; color: white !important;">Tech Code</th>
+                                            <th style="width: 180px; background-color: #dc3545 !important; color: white !important;">Operational Notes</th>
+                                            <th style="width: 340px; background-color: #212529 !important; color: white !important;">Match Explanation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="matchResultsBody">
+                                        <!-- Results will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Enhanced Color-Coded Legend -->
+                            <div class="mt-3">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <small class="text-muted">
+                                            <strong>Match Quality Legend:</strong>
+                                        </small>
+                                        <div class="mt-1">
+                                            <span class="badge bg-success ms-2">
+                                                <i class="fas fa-check-circle me-1"></i>Excellent Match (≥{{ (thresholds.excellent * 100)|round(0) }}%)
+                                            </span>
+                                            <span class="badge bg-success ms-1" style="opacity: 0.8;">
+                                                <i class="fas fa-check me-1"></i>Good Match (≥{{ (thresholds.good * 100)|round(0) }}%)
+                                            </span>
+                                            <span class="badge bg-warning ms-1">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Moderate Match (≥{{ (thresholds.moderate * 100)|round(0) }}%)
+                                            </span>
+                                            <span class="badge bg-warning ms-1" style="opacity: 0.8;">
+                                                <i class="fas fa-info-circle me-1"></i>Weak Match (<{{ (thresholds.moderate * 100)|round(0) }}%)
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-filter me-1"></i>Results below {{ (thresholds.moderate * 100)|round(0) }}% similarity are automatically filtered out
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Hover over truncated text to see full content
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-3 mt-5">
+        <div class="container-fluid" style="max-width: 98%;">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h6 class="text-dark mb-2">
+                        <i class="fas fa-magic me-2 text-primary"></i>Auto MDD
+                    </h6>
+                    <p class="text-muted mb-0 small">
+                        Powered by OpenAI text-embedding + FAISS vector search for Smart Data Quality
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <!-- Rebuild Database Modal -->
+    <div class="modal fade" id="rebuildModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color: #0d6efd;"><i class="fas fa-hammer me-2"></i>Rebuild Database</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- File select section -->
+                    <div id="modalFileSection">
+                        <div class="mb-3">
+                            <label for="modalDbFiles" class="form-label">Select Reference MDD File(s) (.xlsx or .csv)</label>
+                            <input type="file" class="form-control" id="modalDbFiles" name="db_files" accept=".xlsx,.csv" multiple>
+                            <div class="form-text">Choose files to add to library before rebuilding. Leave empty to rebuild with existing files.</div>
+                        </div>
+                    </div>
+                    <!-- Progress section hidden initially -->
+                    <div id="rebuildProgressContainer" class="d-none flex-column align-items-center text-center">
+                        <div class="progress-circle" id="rebuildProgressCircle" style="--progress:0deg;">
+                            <span id="rebuildProgressPercent" class="fw-bold text-dark">0%</span>
+                        </div>
+                        <h6 class="mt-3 text-dark fw-bold" id="rebuildProgressText">Initializing...</h6>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-primary" id="rebuildCheckLogicBtn"><i class="fas fa-table me-2"></i>Rebuild Check_logic_MDD</button>
+                    <button type="button" class="btn btn-primary" id="modalUploadBtn"><i class="fas fa-upload me-2"></i>Upload & Rebuild</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

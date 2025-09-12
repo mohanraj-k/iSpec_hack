@@ -1,0 +1,53 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Courier New;}}
+{\b\fs32 iSpec_hack Application Architecture Diagram}\par
+\pard\f0\fs20
++------------------------------+\par
+|          Web Browser         |\par
+|  HTML / CSS / JS (index.html) |\par
++--------------+---------------+\par
+               |\par
+               | HTTP/HTTPS\par
+               v\par
++--------------+---------------+\par
+|       Flask Web Server        |\par
+|   app.py (Gunicorn in prod)   |\par
++--------------+---------------+\par
+|  Routes: /upload, /progress,  |\par
+|  /database-summary, etc.      |\par
++--------------+---------------+\par
+| Components:                   |\par
+|  - AzureOpenAIClient          |\par
+|  - EnhancedMatchingEngine     |\par
+|  - MDDFileProcessor           |\par
+|  - MDDOutputGenerator         |\par
++--------------+---------------+\par
+               |\par
+               | Embeddings / Matches\par
+               v\par
++--------------+---------------+\par
+|  Vector DB (FAISS on disk)    |\par
+|   data/faiss_index.bin        |\par
++--------------+---------------+\par
+               |\par
+               | File I/O\par
+               v\par
++--------------+---------------+\par
+|  Storage Layer (S3 or Local)  |\par
+|   uploads/, output/,          |\par
+|   MDD_DATABASE/               |\par
++--------------+---------------+\par
+               |\par
+               | External API\par
+               v\par
++--------------+---------------+\par
+|  Azure OpenAI Embeddings API  |\par
++------------------------------+\par
+\par
+{\b Data Flow}\par
+1. User uploads target CSV/Excel via browser.\par
+2. Flask saves file (local/S3) and processes via MDDFileProcessor.\par
+3. EnhancedMatchingEngine generates embeddings (Azure OpenAI) and queries vector DB for matches.\par
+4. Results saved to output/ and served back to client with progress endpoints.\par
+\par
+}

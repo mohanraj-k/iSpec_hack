@@ -1,0 +1,279 @@
+/* Custom styles for MDD Automation Utility */
+
+:root {
+    --bs-primary-rgb: 54, 96, 146;
+    --bs-success-rgb: 144, 238, 144;
+    --bs-warning-rgb: 255, 215, 0;
+    --bs-danger-rgb: 255, 182, 193;
+    --bs-info-rgb: 135, 206, 235;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bs-dark);
+    color: var(--bs-light);
+}
+
+/* Navigation */
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Cards */
+.card {
+    border-radius: 0.75rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-secondary));
+    border-bottom: none;
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.card-header h5 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+}
+
+/* File upload styling */
+.form-control {
+    border-radius: 0.5rem;
+    border: 2px dashed var(--bs-secondary);
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(54, 96, 146, 0.25);
+}
+
+/* Progress bar */
+.progress {
+    height: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: var(--bs-gray-800);
+}
+
+.progress-bar {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    background-color: #007bff !important; /* Bootstrap primary blue */
+    color: #fff !important;
+    transition: width 0.4s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+/* Buttons */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.3);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-success:hover,
+.btn-outline-info:hover {
+    transform: translateY(-1px);
+}
+
+/* Statistics cards */
+.card.bg-success,
+.card.bg-warning,
+.card.bg-danger,
+.card.bg-info {
+    border: none;
+    transition: transform 0.2s ease;
+}
+
+.card.bg-success:hover,
+.card.bg-warning:hover,
+.card.bg-danger:hover,
+.card.bg-info:hover {
+    transform: scale(1.05);
+}
+
+/* Status alerts */
+.alert {
+    border-radius: 0.75rem;
+    border: none;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, rgba(144, 238, 144, 0.2), rgba(144, 238, 144, 0.1));
+    color: var(--bs-success);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+    color: var(--bs-warning);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, rgba(255, 182, 193, 0.2), rgba(255, 182, 193, 0.1));
+    color: var(--bs-danger);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, rgba(135, 206, 235, 0.2), rgba(135, 206, 235, 0.1));
+    color: var(--bs-info);
+}
+
+/* Spinner customization */
+.spinner-border {
+    border-width: 0.2em;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Badge styles */
+.badge {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
+    border-radius: 0.375rem;
+}
+
+/* How it works section */
+.fa-3x {
+    opacity: 0.8;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.text-center:hover .fa-3x {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem !important;
+    }
+    
+    .card-body .row [class*="col-"] {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Loading animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-gray-800);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bs-gray-600);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-gray-500);
+}
+
+/* File input enhancements */
+input[type="file"] {
+    cursor: pointer;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+    background: var(--bs-primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    margin-right: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+    background: var(--bs-primary-dark);
+}
+
+/* Utility classes */
+.text-gradient {
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.border-gradient {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, var(--bs-primary), var(--bs-info)) 1;
+}
+
+/* Focus states for accessibility */
+.btn:focus,
+.form-control:focus,
+.card:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Dark theme specific adjustments */
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-gray-900);
+    border-color: var(--bs-gray-700);
+}
+
+[data-bs-theme="dark"] .form-control {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-gray-600);
+    color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .form-control:focus {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-primary);
+    color: var(--bs-light);
+}

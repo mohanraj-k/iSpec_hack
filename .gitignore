@@ -1,0 +1,73 @@
+# ------------------------------
+# Global ignore rules
+# ------------------------------
+
+############################
+# macOS system files
+############################
+.DS_Store
+
+############################
+# Python byte-code / build artifacts
+############################
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+############################
+# Virtual environments / env files
+############################
+venv/
+.venv/
+.env
+*.env
+
+############################
+# Logs / coverage reports
+############################
+*.log
+gunicorn_access.log
+gunicorn_error.log
+*.coverage
+coverage.xml
+htmlcov/
+
+############################
+# Test/tooling caches
+############################
+.tox/
+.nox/
+pytest_cache/
+
+############################
+# IDE / editor folders
+############################
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+############################
+# Project-specific: large/generated artefacts stored in S3
+############################
+Check_logic_collated_MDD/
+MDD_DATABASE/
+data/
+output/
+uploads/
+
+############################
+# Helm / chart builds
+############################
+# helm/charts/
+
+############################
+# Node / front-end modules
+############################
+# node_modules/
+
+# End of .gitignore
