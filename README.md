@@ -1,8 +1,15 @@
-# Auto MDD - Master Data Definition Generator
+# iSpec - Spec Document Generator
+<!-- Steps to Run -->
+
+1. Clone the repository / Open the Project Folder
+2. Install dependencies : pip install -r requirements.txt
+3. Set environment variables
+4. Run the application : python3 main.py
+5. Open the url : http://localhost:5002/
 
 ## Overview
 
-Auto MDD is an advanced semantic matching system for data quality management that automates the creation of Master Data Definition (MDD) templates using AI-powered semantic search. The system leverages OpenAI embeddings and numpy-based vector search to intelligently match target study validation rules against a comprehensive library of DQ specifications.
+iSpec is an advanced semantic matching system for data quality management that automates the creation of Spec Document (MDD) templates using AI-powered semantic search. The system leverages OpenAI embeddings and numpy-based vector search to intelligently match target study validation rules against a comprehensive library of DQ specifications.
 
 ## Key Features
 
@@ -43,7 +50,7 @@ output/                 # Generated results (CSV/JSON)
 
 ### High-Level Algorithm Flow
 
-The Auto MDD system implements a sophisticated 6-step semantic matching process:
+The iSpec system implements a sophisticated 6-step semantic matching process:
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
