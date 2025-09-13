@@ -1034,7 +1034,7 @@ class MDDAutomationApp {
         // Update the main page database status text
         const headerText = document.querySelector('.card-body p.text-muted');
         if (headerText && headerText.textContent.includes('View status of FAISS vector database')) {
-            headerText.textContent = `FAISS vector database loaded with OpenAI embeddings from MDD files.`;
+            headerText.textContent = `FAISS vector database loaded with OpenAI embeddings from Spec files.`;
         }
     }
 
