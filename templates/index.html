@@ -321,33 +321,40 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
+                        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-5">
+                            <div class="col">
                                 <div class="text-center mb-3">
                                     <i class="fas fa-cube fa-3x text-primary mb-2"></i>
                                     <h6>1. FAISS Vector DB</h6>
-                                    <small class="text-muted"><span id="embeddings-value">722</span> OpenAI embeddings from Library of DQ specifications</small>
+                                    <small class="text-muted"><span id="embeddings-value">—</span> OpenAI embeddings from Library of DQ specifications</small>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 <div class="text-center mb-3">
                                     <i class="fas fa-brain fa-3x text-success mb-2"></i>
                                     <h6>2. OpenAI Semantic Search</h6>
                                     <small class="text-muted">text-embedding-3-small model for similarity matching</small>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 <div class="text-center mb-3">
                                     <i class="fas fa-calculator fa-3x text-warning mb-2"></i>
                                     <h6>3. Hybrid Scoring</h6>
                                     <small class="text-muted">50% cosine similarity + 50% keyword overlap</small>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col">
                                 <div class="text-center mb-3">
                                     <i class="fas fa-wand-magic-sparkles fa-3x text-info mb-2"></i>
                                     <h6>4. Metadata Enrichment</h6>
                                     <small class="text-muted">Auto-populate forms, visits, variables with validation</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center mb-3">
+                                    <i class="fas fa-file-code fa-3x text-secondary mb-2"></i>
+                                    <h6>5. Auto DQ Script Generation</h6>
+                                    <small class="text-muted">Auto generates the DQ script for weak matches</small>
                                 </div>
                             </div>
                         </div>
