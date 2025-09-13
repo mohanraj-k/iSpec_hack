@@ -71,6 +71,10 @@ from flask import jsonify, request
 # --- Progress Bar Backend Implementation ---
 progress_dict = {}
 
+# In-memory store of Target MDD rows per upload session
+# Structure: { upload_id: { dq_name_lower: row_dict } }
+TARGET_MDD_ROWS = {}
+
 def set_progress(upload_id, percent, message):
     progress_dict[upload_id] = {"percent": percent, "message": message}
 
@@ -101,6 +105,7 @@ os.makedirs('uploads', exist_ok=True)
 os.makedirs('output', exist_ok=True)
 os.makedirs('MDD_DATABASE', exist_ok=True)
 os.makedirs('data', exist_ok=True)
+os.makedirs(os.path.join('output', 'dq_scripts'), exist_ok=True)
 
 # Initialize components
 azure_client = AzureOpenAIClient()
@@ -121,6 +126,122 @@ except Exception as e:
 
 from utils.match_thresholds import THRESHOLDS
 
+
+def _slugify_filename(name: str, max_len: int = 60) -> str:
+    """Create a filesystem-safe slug for filenames."""
+    import re
+    name = (name or "dq_script").strip()
+    # Replace spaces and invalids with underscore
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
+    # Collapse repeats
+    name = re.sub(r"_+", "_", name)
+    name = name.strip("_.-")
+    if not name:
+        name = "dq_script"
+    if len(name) > max_len:
+        name = name[:max_len]
+    return name
+
+
+@app.route('/generate-dq-script', methods=['POST'])
+def generate_dq_script():
+    """Generate a Python DQ script file for a given row and return a download URL."""
+    try:
+        data = request.get_json(silent=True) or {}
+        dq_name = data.get('dq_name') or data.get('DQ Name') or data.get('Check Name') or 'DQ_Script'
+        tech_code = data.get('tech_code') or data.get('Pseudo Tech Code (Copy Source Study)') or ''
+        dq_description = data.get('dq_description') or data.get('Target Check Description') or ''
+        query_text = data.get('query_text') or data.get('Target Query Text') or ''
+        ctx = data.get('domain_context') or {}
+        upload_id = data.get('upload_id') or ''
+
+        # Prefer domain context from Target MDD (by upload_id + dq_name)
+        try:
+            if upload_id and dq_name and TARGET_MDD_ROWS.get(upload_id):
+                _map = TARGET_MDD_ROWS.get(upload_id) or {}
+                _row = _map.get(str(dq_name).strip().lower())
+                if _row:
+                    logger.info(f'Rs-line164 generate_dq_script : _row {_row}')
+                    # Build context from Target MDD row
+                    _domain = _gf(_row, 'primary_dataset')
+                    _form = _gf(_row, 'P_form_name')
+                    _visit = _gf(_row, 'P_visit_name')
+                    _vars = _gf(_row, 'primary_dataset_columns')
+                    logger.info(f'Rs-line166 generate_dq_script : _domain {_domain}, _form {_form}, _visit {_visit}, _vars {_vars}')
+                    # Aggregate relational pieces
+                    _rel_domains = []
+                    _rel_vars = []
+                    _rel_dyn = []
+                    for _k in ('R1_Domain', 'R2_Domain', 'R3_Domain', 'R4_Domain', 'R5_Domain'):
+                        _v = _gf(_row, _k)
+                        if _v:
+                            _rel_domains.append(_v)
+                    for _k in ('R1_Domain_Variables', 'R2_Domain_Variables', 'R3_Domain_Variables', 'R4_Domain_Variables', 'R5_Domain_Variables'):
+                        _v = _gf(_row, _k)
+                        if _v:
+                            _rel_vars.append(_v)
+                    for _k in ('R1_Dynamic_Columns', 'R2_Dynamic_Columns', 'R3_Dynamic_Columns', 'R4_Dynamic_Columns', 'R5_Dynamic_Columns'):
+                        _v = _gf(_row, _k)
+                        if _v:
+                            _rel_dyn.append(_v)
+
+                    ctx = {
+                        'domain': _domain,
+                        'form': _form,
+                        'visit': _visit,
+                        'variables': _vars,
+                        'relational_domains': ', '.join(_rel_domains) if _rel_domains else '',
+                        'relational_variables': ', '.join(_rel_vars) if _rel_vars else '',
+                        'relational_dynamic_variables': ', '.join(_rel_dyn) if _rel_dyn else '',
+                    }
+        except Exception as _ctx_ex:
+            logger.warning(f"Failed building domain_context from Target MDD for upload_id={upload_id}, dq_name={dq_name}: {_ctx_ex}")
+
+        # Prepare domain context from loose keys if not provided
+        if not ctx:
+            ctx = {
+                'domain': data.get('domain') or data.get('Domain') or '',
+                'form': data.get('form') or data.get('Form Name') or '',
+                'visit': data.get('visit') or data.get('Visit Name') or '',
+                'variables': data.get('variables') or data.get('Primary Domain Variables (Pre-Conf)') or '',
+            }
+
+        # Generate script content
+        logger.info(f'Rs-line208 generate_dq_script : {dq_name},{dq_description},{query_text},{tech_code},{ctx}')
+        script_content = azure_client.generate_python_script(
+            dq_name=dq_name,
+            check_description=dq_description,
+            query_text=query_text,
+            tech_code=tech_code,
+            domain_context=ctx,
+        )
+
+        # Build filename
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        base = _slugify_filename(dq_name)
+        rel_path = f"dq_scripts/{base}_{ts}.py"
+
+        # Persist file
+        if USE_S3:
+            key = f"{app.config['OUTPUT_FOLDER']}/{rel_path}"
+            storage.write_bytes(key, script_content.encode('utf-8'))
+        else:
+            out_dir = os.path.join(app.config['OUTPUT_FOLDER'], 'dq_scripts')
+            os.makedirs(out_dir, exist_ok=True)
+            full_path = os.path.join(out_dir, f"{base}_{ts}.py")
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write(script_content)
+
+        return jsonify({
+            'success': True,
+            'filename': rel_path,
+            'download_url': f"/download/{rel_path}",
+        })
+    except Exception as e:
+        logger.error(f"Error generating DQ script: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/')
 def index():
@@ -645,7 +766,7 @@ def process_status(task_id):
     """Check processing status (placeholder for future async processing)"""
     return jsonify({'status': 'completed', 'progress': 100})
 
-@app.route('/download/<filename>')
+@app.route('/download/<path:filename>')
 def download_file(filename):
     """Download generated files"""
     try:
@@ -676,6 +797,38 @@ def download_file(filename):
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
+
+@app.route('/view-script/<path:filename>')
+def view_script(filename):
+    """Render a generated script inline in the browser as text/plain.
+
+    Only allows files under output/dq_scripts/ and extensions .py or .txt
+    """
+    try:
+        # Basic allow list
+        if not (filename.startswith('dq_scripts/') and (filename.endswith('.py') or filename.endswith('.txt'))):
+            return jsonify({'error': 'Unsupported file'}), 400
+
+        if USE_S3:
+            key = f"{app.config['OUTPUT_FOLDER']}/{filename}"
+            try:
+                data = storage.read_bytes(key)
+            except Exception:
+                return jsonify({'error': 'File not found'}), 404
+            from flask import Response
+            return Response(data, mimetype='text/plain; charset=utf-8')
+        else:
+            output_dir = os.path.join(os.getcwd(), app.config['OUTPUT_FOLDER'], 'dq_scripts')
+            # Build absolute path and prevent traversal
+            full_path = os.path.abspath(os.path.join(os.getcwd(), app.config['OUTPUT_FOLDER'], filename))
+            if not full_path.startswith(os.path.abspath(output_dir) + os.sep):
+                return jsonify({'error': 'Invalid path'}), 400
+            if not os.path.exists(full_path):
+                return jsonify({'error': 'File not found'}), 404
+            return send_file(full_path, as_attachment=False, download_name=os.path.basename(full_path), mimetype='text/plain')
+    except Exception as e:
+        logger.error(f"View script error: {str(e)}")
+        return jsonify({'error': f'Failed to view script: {str(e)}'}), 500
 
 @app.route('/view-json/<filename>')
 def view_json(filename):
@@ -854,6 +1007,20 @@ def process_mdd_file(filepath, upload_id=None, sponsor_name=None, match_scope='a
         
         # Parse target MDD file
         target_data = file_processor.parse_target_mdd(filepath)
+        # Persist raw Target MDD rows by upload_id for later lookup during script generation
+        try:
+            if upload_id:
+                # Build a map dq_name_lower -> row
+                _per_dq = {}
+                for _row in (target_data or []):
+                    _dq = _gf(_row, 'dq_name')
+                    if _dq:
+                        _per_dq[str(_dq).strip().lower()] = _row
+                if _per_dq:
+                    TARGET_MDD_ROWS[upload_id] = _per_dq
+                    logger.info(f"Stored {len(_per_dq)} target rows for upload_id={upload_id}")
+        except Exception as _store_ex:
+            logger.warning(f"Failed to store Target MDD rows for upload_id={upload_id}: {_store_ex}")
         # Add sponsor_name to each row if provided
         if sponsor_name:
             for row in target_data:
@@ -879,10 +1046,20 @@ def process_mdd_file(filepath, upload_id=None, sponsor_name=None, match_scope='a
         check_logic_mdd_df = load_aggregated_check_logic()
         for idx, row in enumerate(target_data):
             try:
-                # Only update progress every 20 rows or at the last row
-                if (idx % 20 == 0) or (idx == total_rows - 1):
-                    percent = int((idx + 1) / total_rows * 100)
+                # Update progress periodically with base offset and monotonicity
+                # Reserve 0–20% for upload/init, use 20–99% for processing rows
+                stride = 1 if total_rows <= 50 else (5 if total_rows <= 300 else 20)
+                if (idx % stride == 0) or (idx == total_rows - 1):
+                    processed_pct = int(((idx + 1) / total_rows) * 80)  # allocate 80% range for processing
+                    percent = 20 + processed_pct
+                    if percent >= 100:
+                        percent = 99  # leave 100% to finalization in upload_file
                     if upload_id is not None:
+                        # Ensure monotonic progress (never go backwards)
+                        prev = get_progress(upload_id)
+                        prev_pct = int(prev.get('percent', 0)) if isinstance(prev, dict) else 0
+                        if percent < prev_pct:
+                            percent = prev_pct
                         set_progress(upload_id, percent, f"Processing row {idx + 1}/{total_rows}")
                 logger.info(f"Processing row {idx + 1}/{total_rows}")
                 
@@ -898,7 +1075,7 @@ def process_mdd_file(filepath, upload_id=None, sponsor_name=None, match_scope='a
                 )
                 
                 # Take best match if available
-                logger.info(f"Rs-line621 enhanced_matching_engine.py - logging match_results: {match_results}")
+                # logger.info(f"Rs-line621 enhanced_matching_engine.py - logging match_results: {match_results}")
                 # if match_results:
                 #     match_result = match_results[0]  # Best match
                 #     logger.info(f'Rs-line624 enhanced_matching_engine.py - logging Final match_result: {match_result}')
@@ -914,7 +1091,7 @@ def process_mdd_file(filepath, upload_id=None, sponsor_name=None, match_scope='a
                 
                 # Skip rows with no matches (returns None or empty list)
                 if match_result is None:
-                    logger.info(f"Row {idx + 1} filtered out - no matches above 28% threshold")
+                    logger.info(f"Row {idx + 1} filtered out - no matches found")
                     continue
                 
                 # Create enriched row with match data

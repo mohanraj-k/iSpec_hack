@@ -20,6 +20,83 @@ body {
     font-weight: 700;
 }
 
+/* Brand + Tagline styles */
+.app-brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.brand-name {
+    font-size: 1.25rem;
+    letter-spacing: 0.2px;
+}
+
+.brand-tagline {
+    display: inline-block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    background: linear-gradient(90deg, #667eea, #764ba2, var(--bs-info));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-flow 6s ease infinite;
+    white-space: nowrap;
+}
+
+.brand-tagline::after {
+    content: "";
+    display: block;
+    height: 2px;
+    margin-top: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2, var(--bs-info));
+    background-size: 200% auto;
+    animation: gradient-flow 6s ease infinite;
+    border-radius: 999px;
+    opacity: 0.6;
+}
+
+.app-subtagline {
+    margin-top: 2px;
+}
+
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@media (max-width: 992px) {
+    .brand-name { font-size: 1.1rem; }
+    .brand-tagline { font-size: 0.85rem; }
+}
+
+@media (max-width: 576px) {
+    .brand-tagline::after { display: none; }
+    .app-subtagline { display: none; }
+}
+
+/* Footer branding (subtle styling) */
+.footer-name {
+    display: inline-block;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    background: linear-gradient(90deg, rgba(102,126,234,0.9), rgba(118,75,162,0.9));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.footer-tagline {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6c757d; /* muted */
+    letter-spacing: 0.2px;
+    margin-top: 2px;
+}
+
 /* Cards */
 .card {
     border-radius: 0.75rem;
@@ -276,4 +353,46 @@ input[type="file"]::-webkit-file-upload-button:hover {
     background-color: var(--bs-gray-800);
     border-color: var(--bs-primary);
     color: var(--bs-light);
+}
+
+/* DQ Actions: compact, icon-first buttons */
+.btn-compact {
+    padding: 0.25rem 0.5rem !important;
+    line-height: 1;
+}
+
+.icon-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dq-actions .btn {
+    border-radius: 0.4rem !important;
+}
+
+.dq-filename {
+    max-width: 180px;
+    overflow: hidden;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* show up to 2 lines */
+    line-clamp: 2; /* standard property */
+    -webkit-box-orient: vertical;
+    line-height: 1.15;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.dq-filename:hover {
+    text-decoration: underline dotted;
+}
+
+.dq-filename.expanded {
+    -webkit-line-clamp: initial;
+    line-clamp: initial;
+    display: block;
 }

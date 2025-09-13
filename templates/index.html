@@ -282,10 +282,11 @@
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="#">
                 <i class="fas fa-magic me-2"></i>
-                <div>
-                    <span class="fw-bold">Auto MDD</span>
-                    <small class="d-block text-muted" style="font-size: 0.85rem; line-height: 1.3;">
-                        Auto suggest DQ's from MDD library and create DQ specification for Smart Data Quality
+                <div class="app-brand">
+                    <span class="brand-name fw-bold">iSpec</span>
+                    <span class="brand-tagline">The Future of Clinical Spec Generation</span>
+                    <small class="d-block text-muted app-subtagline" style="font-size: 0.85rem; line-height: 1.3;">
+                        Auto suggest DQ's from Spec library and create DQ specification for Smart Data Quality
                     </small>
                 </div>
             </a>
@@ -313,7 +314,7 @@
         <!-- How It Works Section -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
+                <div class="card no-transform">
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-question-circle me-2"></i>How It Works
@@ -439,10 +440,14 @@
                                             </p>
                                             <ol style="font-size: 1rem;">
                                                 <li><strong>Text Processing:</strong> Extracts and cleans validation descriptions</li>
-                                                <li><strong>AI Embeddings:</strong> Converts text to 1536-dimensional vectors using OpenAI</li>
+                                                <li><strong>AI Embeddings:</strong> Converts text to vectors using OpenAI
+                                                    <!-- <small class="text-muted">(DB size: <span id="embeddings-value-2">—</span> vectors)</small> -->
+                                                </li>
                                                 <li><strong>Similarity Search:</strong> Finds closest matches using cosine similarity</li>
                                                 <li><strong>Hybrid Scoring:</strong> Combines semantic similarity (50%) + keyword overlap (50%)</li>
                                                 <li><strong>Business Validation:</strong> Ensures matches make clinical sense</li>
+                                                <li><strong>GenAI Match Explanation:</strong> Generates a concise rationale for each match, including the hybrid score breakdown (cosine + keyword overlap) and aligned terms.</li>
+                                                <li><strong>GenAI TECH CODE & Python:</strong> For lower-confidence or unmatched cases, proposes concise TECH CODE and can generate a runnable Python DQ script (function <code>run_dq(record)</code>) to speed implementation.</li>
                                             </ol>
                                             
                                             <h5 class="text-warning mt-3 fw-bold">
@@ -451,19 +456,19 @@
                                             <div style="font-size: 1rem;">
                                                 <div class="mb-2">
                                                     <span class="badge bg-success me-2">Excellent</span>
-                                                    <span class="text-muted">≥70% - Direct reuse with minimal changes</span>
+                                                    <span class="text-muted">≥{{ (thresholds.excellent * 100)|round(0) }}% - Direct reuse with minimal changes</span>
                                                 </div>
                                                 <div class="mb-2">
                                                     <span class="badge bg-success me-2" style="opacity: 0.8;">Good</span>
-                                                    <span class="text-muted">≥55% - Strong similarity, minor adaptations</span>
+                                                    <span class="text-muted">≥{{ (thresholds.good * 100)|round(0) }}% - Strong similarity, minor adaptations</span>
                                                 </div>
                                                 <div class="mb-2">
                                                     <span class="badge bg-warning me-2">Moderate</span>
-                                                    <span class="text-muted">≥40% - Related concepts, review required</span>
+                                                    <span class="text-muted">≥{{ (thresholds.moderate * 100)|round(0) }}% - Related concepts, review required</span>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <span class="badge bg-warning me-2" style="opacity: 0.8;">Weak</span>
-                                                    <span class="text-muted">≥25% - Some relevance, significant review</span>
+                                                    <span class="badge bg-danger me-2">Weak</span>
+                                                    <span class="text-muted"><{{ (thresholds.moderate * 100)|round(0) }}% - Some relevance, significant review</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -494,8 +499,8 @@
                                             </h5>
                                             <p style="font-size: 1rem;">
                                                 <strong>CSV Output:</strong> Enriched MDD with all metadata for spreadsheet analysis<br>
-                                                <strong>JSON Output:</strong> Detailed results with confidence scores and explanations<br>
-                                                <strong>Matches Only:</strong> Filtered version containing only successful matches
+                                                <strong>JSON Output:</strong> Detailed Report with number of check descriptions on each group<br>
+                                                <!-- <strong>Matches Only:</strong> Filtered version containing only successful matches -->
                                             </p>
                                             <p style="font-size: 1rem;">
                                                 <strong>Key Fields:</strong> Is Match Found, Confidence Score, Match Type, Match Explanation, Reference Details, Extracted Metadata
@@ -534,7 +539,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="fas fa-upload me-2"></i>Upload Target MDD File
+                            <i class="fas fa-upload me-2"></i>Upload Target Spec File
                         </h5>
                     </div>
                     <div class="card-body">
@@ -558,10 +563,10 @@
                                 <div class="form-text">Same Sponsor limits matches to the sponsor you entered; Across Sponsors searches all sponsors.</div>
                             </div>
                             <div class="mb-3">
-                                <label for="targetFile" class="form-label">Select Target MDD File (.xlsx or .csv)</label>
+                                <label for="targetFile" class="form-label">Select Target Spec File (.xlsx or .csv)</label>
                                 <input type="file" class="form-control" id="targetFile" name="target_file" accept=".xlsx,.csv" required>
                                 <div class="form-text">
-                                    Upload your target study MDD specification file (.xlsx or .csv format)
+                                    Upload your target study specification file (.xlsx or .csv format)
                                 </div>
                                 <div class="mt-2">
                                     <a href="{{ url_for('static', filename='templates/target_mdd_template.csv') }}" download="target_mdd_template.csv" class="btn btn-sm btn-outline-secondary">
@@ -570,7 +575,7 @@
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-success" id="uploadBtn">
-                                <i class="fas fa-upload me-2"></i>Process MDD File
+                                <i class="fas fa-upload me-2"></i>Process Spec File
                             </button>
                         </form>
                     </div>
@@ -603,7 +608,7 @@
         <!-- Results Section -->
         <div id="resultsSection" class="row mb-4 d-none">
             <div class="col-12">
-                <div class="card">
+                <div class="card no-transform">
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-chart-bar me-2"></i>Processing Results
@@ -690,14 +695,53 @@
                                             font-weight: 600;
                                             border-right: 1px solid #adb5bd;
                                         }
+                                        #matchResultsTable thead th {
+                                            position: -webkit-sticky; /* Safari */
+                                            position: sticky;
+                                            top: 0;
+                                            z-index: 10; /* Keep header above scrolling rows */
+                                            /* Box shadow to distinguish header while scrolling */
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+                                            background-clip: padding-box;
+                                            /* Ensure solid background so rows don't bleed through */
+                                            background-color: #212529; /* fallback */
+                                            color: #fff;
+                                        }
+                                        /* Make header row sticky as well (extra safety for Safari) */
+                                        #matchResultsTable thead tr {
+                                            position: sticky;
+                                            top: 0;
+                                            z-index: 9;
+                                        }
+                                        /* Improve sticky behavior across browsers */
+                                        #matchResultsTable {
+                                            border-collapse: separate;
+                                            border-spacing: 0;
+                                            overflow: visible; /* prevent clipping sticky header */
+                                        }
+                                        #matchResultsTable thead {
+                                            position: sticky; /* fallback for some browsers */
+                                            top: 0;
+                                            z-index: 6;
+                                        }
                                         .table-responsive {
+                                            position: relative; /* establish stacking context for sticky header */
                                             max-height: 75vh;
                                             overflow-y: auto;
+                                            -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
                                             border: 1px solid #dee2e6;
                                             border-radius: 8px;
                                         }
                                         .card-body {
                                             padding: 0;
+                                        }
+                                        /* Avoid hover transforms that can create new containing blocks */
+                                        #matchResultsTable tbody tr:hover {
+                                            transform: none !important;
+                                        }
+                                        /* Prevent ancestor transform from breaking sticky headers */
+                                        .card.no-transform:hover {
+                                            transform: none !important;
                                         }
                                     </style>
                                     <thead class="table-dark">
@@ -725,7 +769,7 @@
                                             <th style="width: 120px; background-color: #0d6efd !important; color: white !important;">Ref Query Target</th>
                                             <th style="width: 120px; background-color: #0d6efd !important; color: white !important;">Ref Origin Study</th>
                                             <th style="width: 400px; background-color: #0d6efd !important; color: white !important;">Tech Code</th>
-                                            <th style="width: 180px; background-color: #dc3545 !important; color: white !important;">Operational Notes</th>
+                                            <th style="width: 180px; background-color: #dc3545 !important; color: white !important;">DQ Script</th>
                                             <th style="width: 340px; background-color: #212529 !important; color: white !important;">Match Explanation</th>
                                         </tr>
                                     </thead>
@@ -752,15 +796,15 @@
                                             <span class="badge bg-warning ms-1">
                                                 <i class="fas fa-exclamation-triangle me-1"></i>Moderate Match (≥{{ (thresholds.moderate * 100)|round(0) }}%)
                                             </span>
-                                            <span class="badge bg-warning ms-1" style="opacity: 0.8;">
-                                                <i class="fas fa-info-circle me-1"></i>Weak Match (<{{ (thresholds.moderate * 100)|round(0) }}%)
+                                            <span class="badge bg-danger ms-1">
+                                                <i class="fas fa-circle-exclamation me-1"></i>Weak Match (<{{ (thresholds.moderate * 100)|round(0) }}%)
                                             </span>
                                         </div>
-                                        <div class="mt-2">
+                                        <!-- <div class="mt-2">
                                             <small class="text-muted">
                                                 <i class="fas fa-filter me-1"></i>Results below {{ (thresholds.moderate * 100)|round(0) }}% similarity are automatically filtered out
                                             </small>
-                                        </div>
+                                        </div> -->
                                     </div>
                                     <div class="col-md-4">
                                         <small class="text-muted">
@@ -787,7 +831,9 @@
             <div class="row">
                 <div class="col-12 text-center">
                     <h6 class="text-dark mb-2">
-                        <i class="fas fa-magic me-2 text-primary"></i>Auto MDD
+                        <i class="fas fa-magic me-2 text-primary"></i>
+                        <span class="footer-name">iSpec</span>
+                        <span class="d-block footer-tagline">The Future of Clinical Spec Generation</span>
                     </h6>
                     <p class="text-muted mb-0 small">
                         Powered by OpenAI text-embedding + FAISS vector search for Smart Data Quality

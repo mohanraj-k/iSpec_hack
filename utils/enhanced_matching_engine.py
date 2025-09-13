@@ -266,12 +266,13 @@ class EnhancedMatchingEngine:
                     # Generate Tech Logic for less than 30% final score
                     if enhanced_results['confidence_score'] < 0.99:
                         # logger.info(f'Rs-line261 enhanced_matching_engine.py - ref_data {target_row.get("DQ Name")}')
-                        generated_code = self._generate_tech_logic(target_row)
+                        enhanced_results['pseudo_tech_code'] = self._generate_tech_logic(target_row)
+                        # generated_code = self._generate_tech_logic(target_row)
                         # Harmonize variable labels to actual variable names using CSV mapping and optional OpenAI assistance
-                        enhanced_results['pseudo_tech_code'] = self._harmonize_variables_in_pseudo_code(
-                            generated_code,
-                            target_row
-                        )
+                        # enhanced_results['pseudo_tech_code'] = self._harmonize_variables_in_pseudo_code(
+                        #     generated_code,
+                        #     target_row
+                        # )
             del enhanced_results['ref_data']
                         
             return enhanced_results
@@ -435,199 +436,199 @@ class EnhancedMatchingEngine:
         logger.info(f"Rs-line293 enhanced_matching_engine.py - _fallback_text_extraction: {texts}")
         return ' '.join(texts)
 
-    # ========================= Variable Harmonization (Label -> Variable Name) =========================
-    def _get_default_var_config_path(self) -> str:
-        """Resolve the default path of the Domain Variable Config CSV inside the repo."""
-        # Attempt project-relative default
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        candidate = os.path.join(
-            base_dir,
-            'Check_logic_collated_MDD',
-            'Preconf',
-            'Domain_variable_config_05Sep2025_08_28_17.csv'
-        )
-        return candidate
+    # # ========================= Variable Harmonization (Label -> Variable Name) =========================
+    # def _get_default_var_config_path(self) -> str:
+    #     """Resolve the default path of the Domain Variable Config CSV inside the repo."""
+    #     # Attempt project-relative default
+    #     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    #     candidate = os.path.join(
+    #         base_dir,
+    #         'Check_logic_collated_MDD',
+    #         'Preconf',
+    #         'Domain_variable_config_05Sep2025_08_28_17.csv'
+    #     )
+    #     return candidate
 
-    def _load_variable_config(self, csv_path: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Load and cache the variable configuration CSV.
-        Returns list of rows (dicts) with normalized keys.
-        """
-        if not csv_path:
-            csv_path = self._get_default_var_config_path()
+    # def _load_variable_config(self, csv_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    #     """Load and cache the variable configuration CSV.
+    #     Returns list of rows (dicts) with normalized keys.
+    #     """
+    #     if not csv_path:
+    #         csv_path = self._get_default_var_config_path()
 
-        if csv_path in self._var_config_cache:
-            return self._var_config_cache[csv_path]
+    #     if csv_path in self._var_config_cache:
+    #         return self._var_config_cache[csv_path]
 
-        rows: List[Dict[str, Any]] = []
-        try:
-            if not os.path.exists(csv_path):
-                logger.warning(f"Variable config CSV not found at: {csv_path}")
-                self._var_config_cache[csv_path] = rows
-                return rows
+    #     rows: List[Dict[str, Any]] = []
+    #     try:
+    #         if not os.path.exists(csv_path):
+    #             logger.warning(f"Variable config CSV not found at: {csv_path}")
+    #             self._var_config_cache[csv_path] = rows
+    #             return rows
 
-            with open(csv_path, 'r', encoding='utf-8-sig', newline='') as f:
-                reader = csv.DictReader(f)
-                # Normalize header mapping
-                header_map = {h: h.lower().strip() for h in (reader.fieldnames or [])}
+    #         with open(csv_path, 'r', encoding='utf-8-sig', newline='') as f:
+    #             reader = csv.DictReader(f)
+    #             # Normalize header mapping
+    #             header_map = {h: h.lower().strip() for h in (reader.fieldnames or [])}
 
-                def pick(col_patterns: List[str]) -> Optional[str]:
-                    for original, lower in header_map.items():
-                        if any(p in lower for p in col_patterns):
-                            return original
-                    return None
+    #             def pick(col_patterns: List[str]) -> Optional[str]:
+    #                 for original, lower in header_map.items():
+    #                     if any(p in lower for p in col_patterns):
+    #                         return original
+    #                 return None
 
-                domain_col = pick(['domain', 'dataset'])
-                var_name_col = pick(['variable name', 'variablename', 'varname', 'variable_name'])
-                var_label_col = pick(['variable label', 'label'])
-                data_cat_col = pick(['data category'])
+    #             domain_col = pick(['domain', 'dataset'])
+    #             var_name_col = pick(['variable name', 'variablename', 'varname', 'variable_name'])
+    #             var_label_col = pick(['variable label', 'label'])
+    #             data_cat_col = pick(['data category'])
 
-                if not var_name_col or not var_label_col:
-                    logger.warning("Variable config CSV missing required columns (variable name/label)")
-                for r in reader:
-                    rows.append({
-                        'domain': (r.get(domain_col) or '').strip() if domain_col else '',
-                        'var_name': (r.get(var_name_col) or '').strip() if var_name_col else '',
-                        'var_label': (r.get(var_label_col) or '').strip() if var_label_col else '',
-                        'data_category': (r.get(data_cat_col) or '').strip() if data_cat_col else ''
-                    })
+    #             if not var_name_col or not var_label_col:
+    #                 logger.warning("Variable config CSV missing required columns (variable name/label)")
+    #             for r in reader:
+    #                 rows.append({
+    #                     'domain': (r.get(domain_col) or '').strip() if domain_col else '',
+    #                     'var_name': (r.get(var_name_col) or '').strip() if var_name_col else '',
+    #                     'var_label': (r.get(var_label_col) or '').strip() if var_label_col else '',
+    #                     'data_category': (r.get(data_cat_col) or '').strip() if data_cat_col else ''
+    #                 })
 
-            self._var_config_cache[csv_path] = rows
-        except Exception as e:
-            logger.error(f"Failed to load variable config CSV: {e}")
-            self._var_config_cache[csv_path] = rows
-        return rows
+    #         self._var_config_cache[csv_path] = rows
+    #     except Exception as e:
+    #         logger.error(f"Failed to load variable config CSV: {e}")
+    #         self._var_config_cache[csv_path] = rows
+    #     return rows
 
-    def _filter_candidates_by_context(self, all_rows: List[Dict[str, Any]], domain: str, data_category: str) -> List[Dict[str, str]]:
-        """Filter variable candidates to the appropriate domain and optionally data_category."""
-        domain_norm = (domain or '').strip().upper()
-        data_cat_norm = (data_category or '').strip().upper()
-        candidates: List[Dict[str, str]] = []
-        for r in all_rows:
-            d = (r.get('domain') or '').strip().upper()
-            dc = (r.get('data_category') or '').strip().upper()
-            if domain_norm and d and domain_norm != d:
-                continue
-            if data_cat_norm and dc and data_cat_norm != dc:
-                continue
-            name = r.get('var_name') or ''
-            label = r.get('var_label') or ''
-            if name and label:
-                candidates.append({'name': name, 'label': label})
-        # Deduplicate by name/label
-        seen = set()
-        unique: List[Dict[str, str]] = []
-        for c in candidates:
-            key = (c['name'].upper(), c['label'].upper())
-            if key not in seen:
-                seen.add(key)
-                unique.append(c)
-        return unique
+    # def _filter_candidates_by_context(self, all_rows: List[Dict[str, Any]], domain: str, data_category: str) -> List[Dict[str, str]]:
+    #     """Filter variable candidates to the appropriate domain and optionally data_category."""
+    #     domain_norm = (domain or '').strip().upper()
+    #     data_cat_norm = (data_category or '').strip().upper()
+    #     candidates: List[Dict[str, str]] = []
+    #     for r in all_rows:
+    #         d = (r.get('domain') or '').strip().upper()
+    #         dc = (r.get('data_category') or '').strip().upper()
+    #         if domain_norm and d and domain_norm != d:
+    #             continue
+    #         if data_cat_norm and dc and data_cat_norm != dc:
+    #             continue
+    #         name = r.get('var_name') or ''
+    #         label = r.get('var_label') or ''
+    #         if name and label:
+    #             candidates.append({'name': name, 'label': label})
+    #     # Deduplicate by name/label
+    #     seen = set()
+    #     unique: List[Dict[str, str]] = []
+    #     for c in candidates:
+    #         key = (c['name'].upper(), c['label'].upper())
+    #         if key not in seen:
+    #             seen.add(key)
+    #             unique.append(c)
+    #     return unique
 
-    def _label_regex(self, label: str) -> re.Pattern:
-        """Build a case-insensitive regex for a label phrase, allowing flexible whitespace and punctuation."""
-        # Escape, then loosen spaces/hyphens/underscores
-        escaped = re.escape(label)
-        # Replace escaped spaces with flexible whitespace
-        escaped = escaped.replace(r"\ ", r"\\s+")
-        # Allow hyphens/underscores to be optional separators
-        escaped = escaped.replace(r"\-", r"[-_]?")
-        pattern = r"(?<![A-Z0-9_])" + escaped + r"(?![A-Z0-9_])"
-        return re.compile(pattern, flags=re.IGNORECASE)
+    # def _label_regex(self, label: str) -> re.Pattern:
+    #     """Build a case-insensitive regex for a label phrase, allowing flexible whitespace and punctuation."""
+    #     # Escape, then loosen spaces/hyphens/underscores
+    #     escaped = re.escape(label)
+    #     # Replace escaped spaces with flexible whitespace
+    #     escaped = escaped.replace(r"\ ", r"\\s+")
+    #     # Allow hyphens/underscores to be optional separators
+    #     escaped = escaped.replace(r"\-", r"[-_]?")
+    #     pattern = r"(?<![A-Z0-9_])" + escaped + r"(?![A-Z0-9_])"
+    #     return re.compile(pattern, flags=re.IGNORECASE)
 
-    def _apply_direct_label_replacements(self, code: str, candidates: List[Dict[str, str]]) -> Tuple[str, int]:
-        """Replace occurrences of variable labels in code with their variable names using direct regex matching."""
-        # Replace longer labels first to avoid partial overshadowing
-        sorted_cands = sorted(candidates, key=lambda c: len(c['label']), reverse=True)
-        replaced = 0
-        out = code
-        for c in sorted_cands:
-            lab = c['label']
-            var = c['name']
-            if not lab or not var:
-                continue
-            rx = self._label_regex(lab)
-            new_out, n = rx.subn(var, out)
-            if n > 0:
-                replaced += n
-                out = new_out
-        return out, replaced
+    # def _apply_direct_label_replacements(self, code: str, candidates: List[Dict[str, str]]) -> Tuple[str, int]:
+    #     """Replace occurrences of variable labels in code with their variable names using direct regex matching."""
+    #     # Replace longer labels first to avoid partial overshadowing
+    #     sorted_cands = sorted(candidates, key=lambda c: len(c['label']), reverse=True)
+    #     replaced = 0
+    #     out = code
+    #     for c in sorted_cands:
+    #         lab = c['label']
+    #         var = c['name']
+    #         if not lab or not var:
+    #             continue
+    #         rx = self._label_regex(lab)
+    #         new_out, n = rx.subn(var, out)
+    #         if n > 0:
+    #             replaced += n
+    #             out = new_out
+    #     return out, replaced
 
-    def _apply_fuzzy_label_replacements(self, code: str, candidates: List[Dict[str, str]], max_pairs: int = 30) -> Tuple[str, int]:
-        """Use fuzzy matching (difflib) to replace near-matching label phrases with variable names."""
-        # Extract uppercase-ish phrases that are not clearly variables (heuristic)
-        tokens = set(re.findall(r"[A-Za-z][A-Za-z\s]{2,}", code))  # multi-word phrases
-        labels = [c['label'] for c in candidates]
-        out = code
-        replaced = 0
-        for t in sorted(tokens, key=len, reverse=True):
-            match = difflib.get_close_matches(t, labels, n=1, cutoff=0.86)
-            if not match:
-                continue
-            lab = match[0]
-            # Find candidate by label
-            cand = next((c for c in candidates if c['label'] == lab), None)
-            if not cand:
-                continue
-            rx = self._label_regex(lab)
-            new_out, n = rx.subn(cand['name'], out)
-            if n > 0:
-                replaced += n
-                out = new_out
-                if replaced >= max_pairs:
-                    break
-        return out, replaced
+    # def _apply_fuzzy_label_replacements(self, code: str, candidates: List[Dict[str, str]], max_pairs: int = 30) -> Tuple[str, int]:
+    #     """Use fuzzy matching (difflib) to replace near-matching label phrases with variable names."""
+    #     # Extract uppercase-ish phrases that are not clearly variables (heuristic)
+    #     tokens = set(re.findall(r"[A-Za-z][A-Za-z\s]{2,}", code))  # multi-word phrases
+    #     labels = [c['label'] for c in candidates]
+    #     out = code
+    #     replaced = 0
+    #     for t in sorted(tokens, key=len, reverse=True):
+    #         match = difflib.get_close_matches(t, labels, n=1, cutoff=0.86)
+    #         if not match:
+    #             continue
+    #         lab = match[0]
+    #         # Find candidate by label
+    #         cand = next((c for c in candidates if c['label'] == lab), None)
+    #         if not cand:
+    #             continue
+    #         rx = self._label_regex(lab)
+    #         new_out, n = rx.subn(cand['name'], out)
+    #         if n > 0:
+    #             replaced += n
+    #             out = new_out
+    #             if replaced >= max_pairs:
+    #                 break
+    #     return out, replaced
 
-    def _openai_label_mapping(self, code: str, candidates: List[Dict[str, str]], domain: str) -> Dict[str, str]:
-        """Ask the OpenAI client to propose label->var_name mappings present in code for logical/partial matches."""
-        try:
-            if not self.client or not self.client.is_available():
-                return {}
-            # Limit candidates to reduce prompt size
-            limited = candidates[:80]
-            return self.client.suggest_label_to_var_mapping(code, limited, domain)
-        except Exception as e:
-            logger.warning(f"OpenAI label mapping failed: {e}")
-            return {}
+    # def _openai_label_mapping(self, code: str, candidates: List[Dict[str, str]], domain: str) -> Dict[str, str]:
+    #     """Ask the OpenAI client to propose label->var_name mappings present in code for logical/partial matches."""
+    #     try:
+    #         if not self.client or not self.client.is_available():
+    #             return {}
+    #         # Limit candidates to reduce prompt size
+    #         limited = candidates[:80]
+    #         return self.client.suggest_label_to_var_mapping(code, limited, domain)
+    #     except Exception as e:
+    #         logger.warning(f"OpenAI label mapping failed: {e}")
+    #         return {}
 
-    def _harmonize_variables_in_pseudo_code(self, code: str, target_row: Dict[str, Any], csv_path: Optional[str] = None) -> str:
-        """Replace variable labels in the generated code with actual variable names using CSV mapping and OpenAI assistance.
-        - Filters mapping by domain and optional data category.
-        - Applies direct, fuzzy, then OpenAI-guided replacements.
-        """
-        if not code:
-            return code
+    # def _harmonize_variables_in_pseudo_code(self, code: str, target_row: Dict[str, Any], csv_path: Optional[str] = None) -> str:
+    #     """Replace variable labels in the generated code with actual variable names using CSV mapping and OpenAI assistance.
+    #     - Filters mapping by domain and optional data category.
+    #     - Applies direct, fuzzy, then OpenAI-guided replacements.
+    #     """
+    #     if not code:
+    #         return code
 
-        # Determine context
-        domain = _gf(target_row, 'primary_dataset') or target_row.get('Domain') or _gf(target_row, 'domain') or ''
-        data_category = _gf(target_row, 'data_category') or target_row.get('Data Category: IDRP Data Category Name') or ''
+    #     # Determine context
+    #     domain = _gf(target_row, 'primary_dataset') or target_row.get('Domain') or _gf(target_row, 'domain') or ''
+    #     data_category = _gf(target_row, 'data_category') or target_row.get('Data Category: IDRP Data Category Name') or ''
 
-        # Load mapping rows and filter
-        rows = self._load_variable_config(csv_path)
-        if not rows:
-            return code
-        candidates = self._filter_candidates_by_context(rows, domain, data_category)
-        if not candidates:
-            candidates = self._filter_candidates_by_context(rows, domain='', data_category=data_category)
-        if not candidates:
-            candidates = self._filter_candidates_by_context(rows, domain='', data_category='')
+    #     # Load mapping rows and filter
+    #     rows = self._load_variable_config(csv_path)
+    #     if not rows:
+    #         return code
+    #     candidates = self._filter_candidates_by_context(rows, domain, data_category)
+    #     if not candidates:
+    #         candidates = self._filter_candidates_by_context(rows, domain='', data_category=data_category)
+    #     if not candidates:
+    #         candidates = self._filter_candidates_by_context(rows, domain='', data_category='')
 
-        # 1) Direct label substitutions
-        out, n1 = self._apply_direct_label_replacements(code, candidates)
-        # 2) Fuzzy substitutions if needed
-        out, n2 = self._apply_fuzzy_label_replacements(out, candidates) if n1 < 1 else (out, 0)
-        # 3) OpenAI-guided mapping for logical matches if still minimal replacements
-        if (n1 + n2) < 1:
-            mapping = self._openai_label_mapping(out, candidates, domain)
-            # Apply suggested mappings exactly
-            for lab, var in mapping.items():
-                try:
-                    rx = self._label_regex(lab)
-                    out = rx.sub(var, out)
-                except Exception:
-                    continue
+    #     # 1) Direct label substitutions
+    #     out, n1 = self._apply_direct_label_replacements(code, candidates)
+    #     # 2) Fuzzy substitutions if needed
+    #     out, n2 = self._apply_fuzzy_label_replacements(out, candidates) if n1 < 1 else (out, 0)
+    #     # 3) OpenAI-guided mapping for logical matches if still minimal replacements
+    #     if (n1 + n2) < 1:
+    #         mapping = self._openai_label_mapping(out, candidates, domain)
+    #         # Apply suggested mappings exactly
+    #         for lab, var in mapping.items():
+    #             try:
+    #                 rx = self._label_regex(lab)
+    #                 out = rx.sub(var, out)
+    #             except Exception:
+    #                 continue
 
-        return out
-    
+    #     return out
+    ###########################################
     def _apply_domain_prefilter(self, target_row: Dict[str, Any], similarities: np.ndarray, indices: np.ndarray) -> List[Tuple[float, int]]:
         """Apply domain pre-filtering (Enhancement 4)"""
         target_dataset = self._extract_primary_dataset(target_row)

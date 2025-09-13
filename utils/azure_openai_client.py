@@ -296,6 +296,173 @@ Adapted Pseudo Code:
             logger.error(f"Error adapting pseudo code: {str(e)}")
             return f"{base_pseudo_code}\n\n// Adaptation error: {str(e)}\n// Manual review required"
     
+    def generate_python_script(self, dq_name: str, check_description: str = "", query_text: str = "", tech_code: str = "", domain_context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate a runnable Python DQ script from TECH CODE and context.
+
+        Output requirements (Template-style):
+        - Import pandas as pd (no other third-party imports).
+        - Define a single function named: rulefn_<sanitized DQ Name>
+          Signature:
+            def rulefn_<name>(query_text: str,
+                              primary_df: pd.DataFrame,
+                              r1_df: pd.DataFrame | None = None,
+                              r2_df: pd.DataFrame | None = None,
+                              r3_df: pd.DataFrame | None = None,
+                              r4_df: pd.DataFrame | None = None,
+                              r5_df: pd.DataFrame | None = None) -> list[dict]
+        - Each Domain is a DataFrame; each Variable is a column in that domain's DataFrame.
+        - Always read primary variables from primary_df[...] and relational variables from the respective rN_df[...]. Do not interchange.
+        - Return a list[dict] payload_records where each payload has keys:
+            {"query_text": str, "form_index": str, "modif_dts": str, "stg_ck_event_id": int, "relational_ck_event_ids": list, "confid_score": int}
+        - Keep module self-contained (no undefined helper functions). If you need helpers, define them above the function.
+        """
+        # Prepare a safe function name token based on dq_name
+        safe_base = (dq_name or "DQ_Script").strip() or "DQ_Script"
+        fn_token = "".join(ch if ch.isalnum() else "_" for ch in safe_base)
+        if not fn_token:
+            fn_token = "DQ_Script"
+        if fn_token[0].isdigit():
+            fn_token = "X_" + fn_token
+        fn_name = f"rulefn_{fn_token}"
+        # Build dynamic, domain-named parameters for the function signature
+        ctx0 = domain_context or {}
+        def _san(n: Any, default: str) -> str:
+            s = str(n or "").strip()
+            if not s:
+                return default
+            # Keep alnum/underscore, collapse others to underscore, uppercase like template style
+            s2 = "".join(ch if (ch.isalnum() or ch == "_") else "_" for ch in s)
+            s2 = s2.strip("_") or default
+            if s2 and s2[0].isdigit():
+                s2 = f"X_{s2}"
+            return s2.upper()
+
+        primary_param = _san(ctx0.get('domain'), 'PRIMARY')
+        _rels_raw = ctx0.get('relational_domains', '')
+        if isinstance(_rels_raw, (list, tuple)):
+            _raw_list = [str(x).strip() for x in _rels_raw if str(x).strip()]
+        else:
+            _raw_list = [x.strip() for x in str(_rels_raw).split(',') if x.strip()]
+        rel_params: List[str] = []
+        for _nm in _raw_list[:5]:
+            _s = _san(_nm, '')
+            if _s and _s not in rel_params:
+                rel_params.append(_s)
+        # Compose function signature string and domains line for docstring
+        function_sig = f"def {fn_name}(query_text: str, {primary_param}: pd.DataFrame"
+        for _rp in rel_params:
+            function_sig += f", {_rp}: pd.DataFrame | None = None"
+        function_sig += ") -> list[dict]"
+        domains_line = ", ".join([primary_param] + rel_params) if rel_params else primary_param
+        params_hint_line = ", ".join([primary_param] + rel_params) if rel_params else primary_param
+        # Fallback stub if client unavailable
+        if not self.client:
+            safe_name = (dq_name or "DQ_Script").strip() or "DQ_Script"
+            stub = f'''"""
+DQ Script: {safe_name}
+Auto-generated stub (OpenAI unavailable).
+Tech Code (for reference): {tech_code or 'N/A'}
+"""
+
+from typing import List, Dict, Any, Optional
+import pandas as pd
+
+
+{function_sig}:
+    """Template-style DQ function returning a list of payload dicts.
+
+    Each Domain is a DataFrame; each Variable is a column in that domain's DataFrame.
+    Always read primary variables from {primary_param}[...] and relational variables from the respective domain DataFrames. Do not interchange.
+    """
+    try:
+        payload_records: List[Dict[str, Any]] = []
+        # TODO: Implement rule from TECH CODE
+        return payload_records
+    except Exception as e:
+        # Return empty payloads on error to avoid breaking pipelines
+        return []
+'''
+            return stub
+
+        # Construct prompt for deterministic, dependency-free Python
+        try:
+            ctx = domain_context or {}
+            ctx_str = (
+                f"Domain: {ctx.get('domain', 'Unknown')}\n"
+                f"Form: {ctx.get('form', 'Unknown')}\n"
+                f"Visit: {ctx.get('visit', 'Unknown')}\n"
+                f"Primary Variables: {ctx.get('variables', 'Unknown')}\n"
+                f"Relational Domains: {ctx.get('relational_domains', '')}\n"
+                f"Relational Variables: {ctx.get('relational_variables', '')}\n"
+                f"Relational Dynamic Variables: {ctx.get('relational_dynamic_variables', '')}\n"
+            )
+
+            prompt = (
+                "Act as a senior clinical data programming engineer.\n"
+                "Write a single self-contained Python module that implements a data quality rule following this template style.\n"
+                "Rules:\n"
+                "- Output ONLY valid Python code (no markdown, no fences).\n"
+                "- You may import pandas as pd. Do NOT import any other third-party packages.\n"
+                "- Define exactly one function with this signature and name:\n"
+                f"  {function_sig}\n"
+                f"- Use these DataFrame parameter names exactly: {params_hint_line}.\n"
+                "- Include a short header docstring with:\n"
+                f"  Rule Name: {fn_name} ##DQName\n"
+                f"  Domains: {domains_line} ##Domains\n"
+                "  ## Each variable is a column to the DataFrame of respective domain.\n"
+                "- Each Domain is a DataFrame; each Variable is a column in that domain.\n"
+                f"  Always read primary variables from {primary_param}[...] and relational variables from the respective domain DataFrames. Do not interchange.\n"
+                "- Return a list[dict] named payload_records. Each payload dict must exactly contain keys:\n"
+                "  'query_text' (str), 'form_index' (str), 'modif_dts' (str), 'stg_ck_event_id' (int), 'relational_ck_event_ids' (list), 'confid_score' (int).\n"
+                "- Handle missing columns/values defensively: use .get-style accessors or existence checks; do not crash.\n"
+                "- Keep code concise, readable, deterministic, and self-contained (define any helpers you use inside this file).\n\n"
+                f"DQ Name: {dq_name}\n"
+                f"TECH CODE: {tech_code}\n"
+                f"CHECK DESCRIPTION: {check_description}\n"
+                f"QUERY TEXT: {query_text}\n"
+                f"CONTEXT:\n{ctx_str}\n"
+                "Return only the Python file content implementing the rule."
+            )
+
+            response = self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=[
+                    {"role": "system", "content": "You turn rule specifications into robust, dependency-free Python functions."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=1100,
+                temperature=0.2,
+            )
+            content = (response.choices[0].message.content or "").strip()
+            # Basic guard: ensure function name exists
+            if f"def {fn_name}(" not in content:
+                content += (
+                    "\n\n\n# Fallback: ensure expected entrypoint exists\n"
+                    "from typing import List, Dict, Any, Optional\n"
+                    "import pandas as pd\n\n"
+                    f"{function_sig}:\n"
+                    "    return []\n"
+                )
+            return content
+        except Exception as e:
+            logger.error(f"Error generating Python script: {str(e)}")
+            safe_name = (dq_name or "DQ_Script").strip() or "DQ_Script"
+            return f'''"""
+DQ Script: {safe_name}
+Generation error fallback. See server logs.
+"""
+
+from typing import List, Dict, Any, Optional
+import pandas as pd
+
+
+{function_sig}:
+    try:
+        return []
+    except Exception:
+        return []
+'''
+
     def _clean_text(self, text: str) -> str:
         """Clean text for embedding"""
         if not isinstance(text, str):

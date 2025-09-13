@@ -7,18 +7,20 @@ Auto MDD is an advanced semantic matching system for data quality management tha
 ## Key Features
 
 - **Semantic Matching Engine**: Uses OpenAI's text-embedding-3-small model with numpy-based vector search for high-performance similarity matching
-- **Hybrid Scoring Algorithm**: Combines cosine similarity (70%) and keyword overlap (30%) for enhanced accuracy
+- **Hybrid Scoring Algorithm**: Combines cosine similarity (50%) and keyword overlap (50%) for balanced and transparent scoring
 - **Multi-Domain Support**: Handles diverse data domains with flexible field mapping and validation logic
 - **Intelligent Classification**: Provides confidence-based match classifications (Excellent, Good, Moderate, Weak)
 - **Comprehensive Explanations**: Generates detailed business reasoning for each match with actionable recommendations
 - **Dynamic Database**: Built on 722 validated DQ specifications with dynamic rebuilding capability
+- **Variable Label Harmonization**: Automatically maps descriptive variable labels to dataset variable names in generated pseudo-code
+- **S3-Compatible Storage Support**: Optional integration for scalable object storage (enable with `USE_S3=true` environment variable)
 
 ## System Architecture
 
 ### Core Components
 
 - **Flask Web Application** (`app.py`): Main application with REST API endpoints
-- **Numpy Matching Engine** (`utils/numpy_matching_engine.py`): Advanced semantic matching with hybrid scoring algorithm
+- **Enhanced Matching Engine** (`utils/enhanced_matching_engine.py`): Advanced semantic matching with hybrid scoring, domain-aware filtering, and variable label harmonization
 - **OpenAI Client** (`utils/azure_openai_client.py`): Handles embeddings and text processing
 - **File Processor** (`utils/mdd_file_processor.py`): Excel file parsing with standardized column mapping
 - **Output Generator** (`utils/mdd_output_generator.py`): Creates enriched CSV and JSON results
@@ -147,11 +149,10 @@ final_score = final_score * (1 - reuse_penalty)
 ### Step 5: Classification and Business Validation
 
 **Confidence Thresholds:**
-- **Excellent Match**: ≥35% confidence (High reuse potential)
-- **Good Match**: ≥25% confidence (Minor customization needed)
-- **Moderate Match**: ≥15% confidence (Adaptation required)
-- **Weak Match**: ≥5% confidence (Review for insights)
-- **No Match**: <5% confidence (Custom development recommended)
+- **Excellent Match**: ≥80% confidence (High reuse potential)
+- **Good Match**: ≥60% confidence (Minor customization needed)
+- **Moderate Match**: ≥40% confidence (Adaptation required)
+- **Weak Match**: <40% confidence (Review for insights)
 
 **Business Logic Validation:**
 - Domain alignment validation (Lab-to-Lab, AE-to-AE)

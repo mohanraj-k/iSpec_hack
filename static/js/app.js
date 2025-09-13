@@ -9,6 +9,15 @@ class MDDAutomationApp {
         this.init();
     }
 
+    initTooltips(container = document) {
+        try {
+            const els = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+            els.forEach(el => {
+                try { new bootstrap.Tooltip(el); } catch (_) {}
+            });
+        } catch (_) {}
+    }
+
     getMaxUploadMB() {
         try {
             const meta = document.querySelector('meta[name="max-upload-mb"]');
@@ -22,6 +31,8 @@ class MDDAutomationApp {
     init() {
         this.bindEvents();
         this.checkDatabaseStatus();
+        // Initialize any tooltips present on page load
+        this.initTooltips(document.body);
     }
 
     bindEvents() {
@@ -292,6 +303,8 @@ class MDDAutomationApp {
 
         // Generate a unique upload_id client-side so we can start polling immediately
         const uploadId = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : Date.now().toString(36);
+        // Track last upload session id for later script generation
+        this.lastUploadId = uploadId;
         const formData = new FormData();
         formData.append('target_file', file);
         formData.append('upload_id', uploadId);
@@ -318,6 +331,10 @@ class MDDAutomationApp {
                 return;
             }
             const uploadId = data.upload_id;
+            if (uploadId) {
+                // Use server-confirmed upload id if provided
+                this.lastUploadId = uploadId;
+            }
             if (!uploadId) {
                 this.updateProgress(100, 'Processing completed.');
                 setTimeout(() => this.hideProgressSection(), 1000);
@@ -605,6 +622,8 @@ class MDDAutomationApp {
                 </td>
             `;
             tbody.appendChild(row);
+            // Initialize tooltips for the created action buttons
+            this.initTooltips(row);
             return;
         }
         
@@ -625,9 +644,10 @@ class MDDAutomationApp {
             // Green variations for good matches - using darker green
             if (matchType === 'Excellent Match') badgeClass = 'bg-success';
             else if (matchType === 'Good Match') badgeClass = 'bg-success';
-            // Amber variations for moderate/weak matches
+            // Amber for moderate matches
             else if (matchType === 'Moderate Match') badgeClass = 'bg-warning';
-            else if (matchType === 'Low Match' || matchType === 'Weak Match') badgeClass = 'bg-warning';
+            // Red for weak/low matches to indicate poor quality
+            else if (matchType === 'Low Match' || matchType === 'Weak Match') badgeClass = 'bg-danger';
             // Red for no match
             else if (matchType === 'No Match') badgeClass = 'bg-danger';
             
@@ -678,7 +698,8 @@ class MDDAutomationApp {
             const queryTarget = result['Query Target (Pre-Conf)'] || 'N/A';
             const originStudy = result['Origin Study (Copy Source Study)'] || 'N/A';
             const techCode = result['Pseudo Tech Code (Copy Source Study)'] || 'N/A';
-            const operationalNotes = result['Operational Notes'] || '';
+            // const operationalNotes = result['Operational Notes'] || '';
+            
             // to be continued
             row.innerHTML = `
                 <td class="text-center">${index + 1}</td>
@@ -789,9 +810,33 @@ class MDDAutomationApp {
                     </div>
                 </td>
                 <td>
-                    <div style="word-wrap: break-word; white-space: normal; line-height: 1.3; max-height: 70px; overflow-y: auto;">
-                        <small class="text-danger fw-bold">${this.escapeHtml(operationalNotes)}</small>
+                    <div class="dropdown dq-actions">
+                        <button class="btn btn-outline-danger btn-compact icon-btn dq-menu-toggle" type="button" id="dqMenu_${index}"
+                                data-bs-toggle="dropdown" aria-expanded="false" title="Actions" data-bs-title="DQ Actions">
+                            <i class="fas fa-ellipsis-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dqMenu_${index}">
+                            <li>
+                                <a class="dropdown-item dq-menu-generate" href="#">
+                                    <i class="fas fa-file-code me-2"></i>
+                                    <span class="dq-gen-label">Generate Script</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item dq-menu-view d-none" href="#" target="_blank" rel="noopener noreferrer">
+                                    <i class="fas fa-eye me-2"></i>
+                                    View Script
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item dq-menu-download d-none" href="#">
+                                    <i class="fas fa-download me-2"></i>
+                                    Download Script
+                                </a>
+                            </li>
+                        </ul>
                     </div>
+                    <small class="dq-filename text-muted d-block mt-1 d-none" title="Last generated file"></small>
                 </td>
                 <td>
                     <div style="word-wrap: break-word; white-space: normal; line-height: 1.4; max-height: 100px; overflow-y: auto; font-size: 13px; padding: 4px;">
@@ -801,6 +846,118 @@ class MDDAutomationApp {
             `;
             
             tbody.appendChild(row);
+
+            // Attach handlers for dropdown actions (generate/download)
+            const menuToggle = row.querySelector('.dq-menu-toggle');
+            const genItem = row.querySelector('.dq-menu-generate');
+            const dlItem = row.querySelector('.dq-menu-download');
+            const viewItem = row.querySelector('.dq-menu-view');
+            const fnLabel = row.querySelector('.dq-filename');
+            if (genItem) {
+                genItem.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const icon = menuToggle.querySelector('i');
+                    menuToggle.disabled = true;
+                    const prevIcon = icon ? icon.className : '';
+                    if (icon) icon.className = 'fas fa-spinner fa-spin';
+                    try {
+                        const payload = {
+                            dq_name: targetCheckName || '',
+                            tech_code: techCode || '',
+                            dq_description: targetCheckDesc || '',
+                            query_text: targetQueryText || '',
+                            upload_id: this.lastUploadId || '',
+                            domain_context: {
+                                domain: domain || '',
+                                form: formName || '',
+                                visit: visitName || '',
+                                variables: primaryVars || '',
+                                relational_domains: relationalDomains || '',
+                                relational_variables: relationalVars || '',
+                                relational_dynamic_variables: relationalDynamicVars || ''
+                            }
+                        };
+                        const resp = await fetch('/generate-dq-script', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const result = await resp.json();
+                        if (!resp.ok || !result.success) {
+                            throw new Error(result && result.error ? result.error : 'Generation failed');
+                        }
+                        // Update UI: enable view/download, update label to Regenerate
+                        if (dlItem) {
+                            dlItem.classList.remove('d-none');
+                            dlItem.dataset.url = result.download_url;
+                            dlItem.dataset.filename = result.filename ? result.filename.split('/').pop() : 'dq_script.py';
+                        }
+                        if (viewItem) {
+                            viewItem.classList.remove('d-none');
+                            viewItem.href = `/view-script/${result.filename}`;
+                        }
+                        const genLabel = genItem.querySelector('.dq-gen-label');
+                        if (genLabel) genLabel.textContent = 'Regenerate Script';
+                        if (fnLabel) {
+                            const fullName = result.filename ? result.filename.split('/').pop() : '';
+                            fnLabel.textContent = fullName;
+                            fnLabel.classList.toggle('d-none', !fullName);
+                            // Attach tooltip with full file name
+                            fnLabel.setAttribute('title', fullName);
+                            fnLabel.setAttribute('data-bs-toggle', 'tooltip');
+                            fnLabel.setAttribute('data-bs-title', fullName);
+                            // Bind expand/collapse on click once
+                            if (!fnLabel.dataset.bound) {
+                                fnLabel.addEventListener('click', () => {
+                                    fnLabel.classList.toggle('expanded');
+                                });
+                                fnLabel.dataset.bound = '1';
+                            }
+                            this.initTooltips(row);
+                        }
+                        if (menuToggle) menuToggle.title = 'Regenerate or Download';
+
+                        // Trigger a silent download
+                        const a = document.createElement('a');
+                        a.href = result.download_url;
+                        a.download = dlItem && dlItem.dataset.filename ? dlItem.dataset.filename : 'dq_script.py';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        this.showToast('DQ script generated successfully.', 'success');
+                    } catch (e) {
+                        console.error('Generate DQ script error:', e);
+                        this.showToast('Failed to generate DQ script: ' + (e.message || e), 'danger');
+                    } finally {
+                        menuToggle.disabled = false;
+                        if (icon) icon.className = prevIcon || 'fas fa-ellipsis-vertical';
+                    }
+                });
+            }
+
+            if (dlItem) {
+                dlItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const url = dlItem.dataset.url;
+                    const name = dlItem.dataset.filename || 'dq_script.py';
+                    if (!url) return;
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = name;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                });
+            }
+
+            if (viewItem) {
+                viewItem.addEventListener('click', (e) => {
+                    // Allow normal navigation to new tab via target=_blank
+                    if (!viewItem.href || viewItem.classList.contains('d-none')) {
+                        e.preventDefault();
+                    }
+                });
+            }
         });
     }
 
@@ -862,6 +1019,52 @@ class MDDAutomationApp {
     hideAlert() {
         const alertDiv = document.getElementById('statusAlert');
         alertDiv.classList.add('d-none');
+    }
+
+    showToast(message, type = 'info') {
+        try {
+            // Ensure container exists
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = 1080; // above dropdowns
+                document.body.appendChild(container);
+            }
+
+            // Map type to Bootstrap contextual classes
+            const typeClass = {
+                success: 'text-bg-success',
+                danger: 'text-bg-danger',
+                warning: 'text-bg-warning',
+                info: 'text-bg-info'
+            }[type] || 'text-bg-secondary';
+
+            // Create toast element
+            const toastEl = document.createElement('div');
+            toastEl.className = `toast align-items-center ${typeClass} border-0`;
+            toastEl.setAttribute('role', 'alert');
+            toastEl.setAttribute('aria-live', 'assertive');
+            toastEl.setAttribute('aria-atomic', 'true');
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${this.escapeHtml(message)}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            container.appendChild(toastEl);
+
+            // Show toast
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000, autohide: true });
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => {
+                try { toastEl.remove(); } catch (_) {}
+            });
+        } catch (e) {
+            // Fallback to alert if toast fails
+            this.showAlert(message, type);
+        }
     }
 
     async showDatabaseSummary() {
@@ -1018,23 +1221,23 @@ class MDDAutomationApp {
                 if (embeddingsValue) {
                     embeddingsValue.textContent = result.total_records;
                 }
-                
+                // Also update the secondary display in the How It Works section
+                const embeddingsValue2 = document.getElementById('embeddings-value-2');
+                if (embeddingsValue2) {
+                    embeddingsValue2.textContent = result.total_records;
+                }
+
+                // Optional: update any init/reinit button if present
                 const btn = document.getElementById('initDbBtn');
-                btn.innerHTML = '<i class="fas fa-sync me-2"></i>Reinitialize Database';
-                btn.classList.remove('btn-outline-primary');
-                btn.classList.add('btn-outline-secondary');
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-sync me-2"></i>Reinitialize Database';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-outline-secondary');
+                    btn.disabled = false;
+                }
             }
         } catch (error) {
             console.log('Database not yet initialized');
-        }
-    }
-
-    updateMainPageHeaderStatus(totalRecords, totalFiles) {
-        // Update the main page database status text
-        const headerText = document.querySelector('.card-body p.text-muted');
-        if (headerText && headerText.textContent.includes('View status of FAISS vector database')) {
-            headerText.textContent = `FAISS vector database loaded with OpenAI embeddings from MDD files.`;
         }
     }
 
